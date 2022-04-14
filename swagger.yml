@@ -1,0 +1,268 @@
+swagger: "2.0"
+info:
+  description: "Model One can do almost anything that requires understanding or generating natural language."
+  version: "0.1"
+  title: "Model One API"
+  termsOfService: ""
+  contact:
+    email: "noreply@beyond.ml"
+host: "api.beyond.ml"
+basePath: "/v0"
+tags:
+- name: "models"
+  description: "Learn how to customize a model for your application."
+schemes:
+- "https"
+paths:
+  /models:
+    post:
+      tags:
+      - "models"
+      summary: "Create a new model."
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "In the body of the request, the parameters for the new model are transmitted. Two types of models are currently supported: 'generative' and 'classification'"
+        required: true
+        schema:
+          $ref: "#/definitions/CreateModelRequest"
+      responses:
+        "200":
+          description: "Operation succeed. In case of success, the response will contain the description of the model. You will need the `model_name` from the response to continue using API."
+          schema:
+            $ref: "#/definitions/ApiStatusResponse"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+      
+    get:
+      tags:
+      - "models"
+      summary: "Returns information of all the created models."
+      responses:
+        "200":
+          description: "Operation succeeded."
+          schema:
+            $ref: "#/definitions/Models"
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+  
+  /models/{model_name}/status:
+    get:
+      tags:
+      - "models"
+      summary: "Returns information of the model with id {model_name}."
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Operation succeeded. Response contains the information of the model: id, status, etc."
+          schema:
+            $ref: "#/definitions/ApiStatusResponse"
+        "400":
+          description: "Unknown handler. Use GET method for request."
+        "404":
+          description: "Model hasn't been found."
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+  
+  /models/{model_name}/upload:
+    post:
+      tags:
+      - "models"
+      summary: "Is used to upload training and validation dataset."
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: "#/definitions/Datasets"
+      responses:
+        "200":
+          description: "Operation succeeded. If success model status will be changed as `datasets_uploaded`."
+          schema:
+            $ref: "#/definitions/ApiStatusResponse"
+        "400":
+          description: "Invalid request format. Ensure the datasets have more then 100 examples."
+        "401":
+          description: "Authorization token is invalid."
+        "405":
+          description: "Use POST method for request."
+        "412":
+          description: "Ensure the datasets have more then 100 examples."
+
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+ 
+  /models/{model_name}/fit:
+    post:
+      tags:
+      - "models"
+      summary: "Use the method to queue the model for training."
+      description: "This action cannot be cancellled. The model is trained for several hours, to find out the status of the model, use the `/status` method. Before using this method, you need to upload datasets."
+
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Operation succeeded. If succeeded the status of the model will be changed as `fit_requested`"
+          schema:
+            $ref: "#/definitions/ApiStatusResponse"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+        "405":
+          description: "Use POST method for request."
+        "409":
+          description: "Invalid API usage. Ensure the model has `fit_request` status."
+      security:
+      - bearerAuth: []
+  
+  /models/{model_name}/generate:
+    get:
+      tags:
+      - "models"
+      summary: "Inference model."
+      description: "Generates data based on prefix. The prefix is passed as a request parameter. Before method usage ensure the model has been trained and has the status `ready`. This method can be used only for a model with type `generative`. For `classification` models, use the `classify` method."
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      - name: "context"
+        in: "query"
+        description: "Prefix used for data generation."
+        required: true
+        type: "string"
+        
+      responses:
+        "200":
+          description: "Operation succeeded."
+          schema:
+            $ref: "#/definitions/ApiGenerativeResponse"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+        "405":
+          description: "Use GET method for request."
+        "409":
+          description: "Incorrect api usage. The model is not yet ready for use, so it is impossible to apply the method. The current status of the model could be found in the response."
+
+          schema:
+            $ref: "#/definitions/ApiGenerativeResponse"
+      security:
+      - bearerAuth: []
+
+securityDefinitions:
+  bearerAuth:
+    type: apiKey
+    name: Authorization
+    in: "header"
+    
+definitions:
+  CreateModelRequest:
+    type: "object"
+    properties:
+      model_type:
+        type: "string"
+
+  ModelInfo:
+    type: "object"
+    properties:
+      model_name:
+        type: "string"
+      owner_id:
+        type: "string"
+      status:
+        type: "string"
+      model_type:
+        type: "string"
+  
+  ApiStatusResponse:
+    type: "object"
+    properties:
+      model:
+        $ref: "#/definitions/ModelInfo"
+      error_message:
+        type: string
+        
+  Models:
+    type: "object"
+    properties:
+      error_message:
+        type: string
+      models:
+        type: "array"
+        items:
+          $ref: "#/definitions/ModelInfo"
+          
+  Dataset:
+    type: "array"
+    items:
+      type: "array"
+      items:
+        type: "string"
+        
+  Datasets:
+    type: "object"
+    properties:
+      train_data:
+        $ref: "#/definitions/Dataset"
+      validate_data:
+        $ref: "#/definitions/Dataset"
+  
+  GenerativeResult:
+    type: "object"
+    properties:
+      response:
+        type: string
+  
+  ApiGenerativeResponse:
+    type: "object"
+    properties:
+      error_message:
+        type: string
+      info:
+        $ref: "#/definitions/ModelInfo"
+      answer:
+        type: "object"
+        properties:
+          responses:
+            type: "array"
+            items:
+              $ref: "#/definitions/GenerativeResult"
+      context:
+        type: "array"
+        items:
+          type: "string"
