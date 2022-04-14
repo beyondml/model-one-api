@@ -3,9 +3,9 @@ info:
   description: "Model One can do almost anything that requires understanding or generating natural language."
   version: "0.1"
   title: "Model One API"
-  termsOfService: ""
-  contact:
-    email: "noreply@beyond.ml"
+externalDocs:
+  description: "About Model One"
+  url: "https://beyond.ml/model-one"
 host: "api.beyond.ml"
 basePath: "/v0"
 tags:
