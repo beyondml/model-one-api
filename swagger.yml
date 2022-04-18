@@ -30,7 +30,7 @@ paths:
         "200":
           description: "Operation succeed. In case of success, the response will contain the description of the model. You will need the `model_name` from the response to continue using API."
           schema:
-            $ref: "#/definitions/ApiStatusResponse"
+            $ref: "#/definitions/ModelInfo"
         "400":
           description: "Invalid request format."
         "401":
@@ -71,13 +71,13 @@ paths:
         "200":
           description: "Operation succeeded. Response contains the information of the model: id, status, etc."
           schema:
-            $ref: "#/definitions/ApiStatusResponse"
+            $ref: "#/definitions/ModelInfo"
         "400":
           description: "Unknown handler. Use GET method for request."
-        "404":
-          description: "Model hasn't been found."
         "401":
           description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
       produces:
       - "application/json"
       security:
@@ -88,6 +88,7 @@ paths:
       tags:
       - "models"
       summary: "Is used to upload training and validation dataset."
+      description: "The generation type model uses the `promts` and `suffixes` fields. Arrays must be of equal length. For the classification task, use `promts` and `classes`. The `classes` column contains the target labels for classification, only `0` and `1` can be used as array elements."
       parameters:
       - name: "model_name"
         in: "path"
@@ -103,13 +104,17 @@ paths:
         "200":
           description: "Operation succeeded. If success model status will be changed as `datasets_uploaded`."
           schema:
-            $ref: "#/definitions/ApiStatusResponse"
+            $ref: "#/definitions/ModelInfo"
         "400":
           description: "Invalid request format. Ensure the datasets have more then 100 examples."
         "401":
           description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
         "405":
           description: "Use POST method for request."
+        "409":
+          description: "Model is ready."
         "412":
           description: "Ensure the datasets have more then 100 examples."
 
@@ -135,11 +140,13 @@ paths:
         "200":
           description: "Operation succeeded. If succeeded the status of the model will be changed as `fit_requested`"
           schema:
-            $ref: "#/definitions/ApiStatusResponse"
+            $ref: "#/definitions/ModelInfo"
         "400":
           description: "Invalid request format."
         "401":
           description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
         "405":
           description: "Use POST method for request."
         "409":
@@ -174,6 +181,47 @@ paths:
           description: "Invalid request format."
         "401":
           description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
+        "405":
+          description: "Use GET method for request."
+        "409":
+          description: "Incorrect api usage. The model is not yet ready for use, so it is impossible to apply the method. The current status of the model could be found in the response."
+
+          schema:
+            $ref: "#/definitions/ApiGenerativeResponse"
+      security:
+      - bearerAuth: []
+      
+  /models/{model_name}/classify:
+    get:
+      tags:
+      - "models"
+      summary: "Inference model."
+      description: "The prefix is passed as a request parameter. Before method usage ensure the model has been trained and has the status `ready`. This method can be used only for a model with type `classify`."
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      - name: "context"
+        in: "query"
+        description: "Input data."
+        required: true
+        type: "string"
+        
+      responses:
+        "200":
+          description: "Operation succeeded."
+          schema:
+            $ref: "#/definitions/ApiClassificationResponse"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
         "405":
           description: "Use GET method for request."
         "409":
@@ -208,31 +256,30 @@ definitions:
         type: "string"
       model_type:
         type: "string"
-  
-  ApiStatusResponse:
-    type: "object"
-    properties:
-      model:
-        $ref: "#/definitions/ModelInfo"
-      error_message:
-        type: string
-        
+          
   Models:
     type: "object"
     properties:
-      error_message:
-        type: string
       models:
         type: "array"
         items:
           $ref: "#/definitions/ModelInfo"
           
   Dataset:
-    type: "array"
-    items:
-      type: "array"
-      items:
-        type: "string"
+    type: object
+    properties:
+      promts:
+        type: "array"
+        items:
+          type: "string"
+      suffixes:
+        type: "array"
+        items:
+          type: "string"
+      classes:
+        type: "array"
+        items:
+          type: "integer"
         
   Datasets:
     type: "object"
@@ -251,8 +298,6 @@ definitions:
   ApiGenerativeResponse:
     type: "object"
     properties:
-      error_message:
-        type: string
       info:
         $ref: "#/definitions/ModelInfo"
       answer:
@@ -262,6 +307,22 @@ definitions:
             type: "array"
             items:
               $ref: "#/definitions/GenerativeResult"
+      context:
+        type: "array"
+        items:
+          type: "string"
+
+  ClassificationResult:
+    type: "array"
+    items:
+      type: number
+  ApiClassificationResponse:
+    type: "object"
+    properties:
+      info:
+        $ref: "#/definitions/ModelInfo"
+      answer:
+        $ref: "#/definitions/ClassificationResult"
       context:
         type: "array"
         items:
