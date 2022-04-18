@@ -22,7 +22,7 @@ paths:
       parameters:
       - in: "body"
         name: "body"
-        description: "In the body of the request, the parameters for the new model are transmitted. Two types of models are currently supported: 'generative' and 'classification'"
+        description: "In the body of the request, the parameters for the new model are transmitted. Currently supported 'generative'"
         required: true
         schema:
           $ref: "#/definitions/CreateModelRequest"
@@ -88,7 +88,7 @@ paths:
       tags:
       - "models"
       summary: "Is used to upload training and validation dataset."
-      description: "The generation type model uses the `promts` and `suffixes` fields. Arrays must be of equal length. For the classification task, use `promts` and `classes`. The `classes` column contains the target labels for classification, only `0` and `1` can be used as array elements."
+      description: "The generation type model uses the `inputs` and `outputs` fields. Arrays must be of equal length. For the classification task, use `inputs` and `classes`. The `classes` column contains the target labels for classification, only `0` and `1` can be used as array elements."
       parameters:
       - name: "model_name"
         in: "path"
@@ -166,7 +166,7 @@ paths:
         description: "Model id."
         required: true
         type: "string"
-      - name: "context"
+      - name: "input"
         in: "query"
         description: "Prefix used for data generation."
         required: true
@@ -177,45 +177,6 @@ paths:
           description: "Operation succeeded."
           schema:
             $ref: "#/definitions/ApiGenerativeResponse"
-        "400":
-          description: "Invalid request format."
-        "401":
-          description: "Authorization token is invalid."
-        "404":
-          description: "Model hasn't been found."
-        "405":
-          description: "Use GET method for request."
-        "409":
-          description: "Incorrect api usage. The model is not yet ready for use, so it is impossible to apply the method. The current status of the model could be found in the response."
-
-          schema:
-            $ref: "#/definitions/ApiGenerativeResponse"
-      security:
-      - bearerAuth: []
-      
-  /models/{model_name}/classify:
-    get:
-      tags:
-      - "models"
-      summary: "Inference model."
-      description: "The prefix is passed as a request parameter. Before method usage ensure the model has been trained and has the status `ready`. This method can be used only for a model with type `classify`."
-      parameters:
-      - name: "model_name"
-        in: "path"
-        description: "Model id."
-        required: true
-        type: "string"
-      - name: "context"
-        in: "query"
-        description: "Input data."
-        required: true
-        type: "string"
-        
-      responses:
-        "200":
-          description: "Operation succeeded."
-          schema:
-            $ref: "#/definitions/ApiClassificationResponse"
         "400":
           description: "Invalid request format."
         "401":
@@ -268,11 +229,11 @@ definitions:
   Dataset:
     type: object
     properties:
-      promts:
+      inputs:
         type: "array"
         items:
           type: "string"
-      suffixes:
+      outputs:
         type: "array"
         items:
           type: "string"
