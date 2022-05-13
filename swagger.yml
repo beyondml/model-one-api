@@ -11,6 +11,8 @@ basePath: "/v0"
 tags:
 - name: "models"
   description: "Learn how to customize a model for your application."
+- name: "files"
+  description: "All about how to upload datasets."
 schemes:
 - "https"
 paths:
@@ -22,7 +24,7 @@ paths:
       parameters:
       - in: "body"
         name: "body"
-        description: "In the body of the request, the parameters for the new model are transmitted. Two types of models are currently supported: 'generator' and 'classifier'"
+        description: "In the body of the request, the parameters for the new model are transmitted. Two types of models are currently supported: 'generator' and 'classifier'. In order to train a multiclass classification model, you should pass a `num_classes`."
         required: true
         schema:
           $ref: "#/definitions/CreateModelRequest"
@@ -83,12 +85,37 @@ paths:
       security:
       - bearerAuth: []
   
+  /models/{model_name}/delete:
+    delete:
+      tags:
+      - "models"
+      summary: "Delete the model with id {model_name}."
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Operation succeeded."
+          schema:
+            $ref: "#/definitions/ModelInfo"
+        "401":
+          description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+  
   /models/{model_name}/upload:
     post:
       tags:
       - "models"
       summary: "Is used to upload training and validation dataset."
-      description: "The generation type model uses the `inputs` and `outputs` fields. Arrays must be of equal length and have at least 32 examples. For the classification task, use `inputs` and `classes`. The `classes` column contains the target labels for classification, only `0` and `1` can be used as array elements."
+      description: "The generation type model uses the `inputs` and `outputs` fields. Arrays must be of equal length and have at least 32 examples. For the classification task, use `inputs` and `classes`. The `classes` column contains the target labels for classification."
       parameters:
       - name: "model_name"
         in: "path"
@@ -116,7 +143,7 @@ paths:
         "409":
           description: "Model is ready."
         "412":
-          description: "Ensure the datasets have more then 100 examples."
+          description: "Ensure the datasets have more then 32 examples."
 
       produces:
       - "application/json"
@@ -231,6 +258,164 @@ paths:
             $ref: "#/definitions/ApiGenerativeResponse"
       security:
       - bearerAuth: []
+      
+  
+  /models/{model_name}/bind:
+    post:
+      tags:
+      - "models"
+      summary: "Use this method to bind the two async uploaded files with model."
+      description: "The request must contains ids of uploaded files. This method checks that files are already ready and model type corresponds to file's task type."
+      parameters:
+      - name: "model_name"
+        in: "path"
+        description: "Model id."
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: "#/definitions/BindRequest"
+        
+      responses:
+        "200":
+          description: "Operation succeeded."
+          schema:
+            $ref: "#/definitions/ModelInfo"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+        "404":
+          description: "Model hasn't been found."
+        "405":
+          description: "Use POST method for request."
+      security:
+      - bearerAuth: []
+      
+  /files:
+    post:
+      tags:
+      - "files"
+      summary: "Create a new file."
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "In the body of the request, the parameters for the new file are transmitted. Two task types are currently supported: 'generator' and 'classifier'"
+        required: true
+        schema:
+          $ref: "#/definitions/CreateFileRequest"
+      responses:
+        "200":
+          description: "Operation succeed. In case of success, the response will contain the description of the model. You will need the `model_name` from the response to continue using API."
+          schema:
+            $ref: "#/definitions/FileInfo"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+      
+    get:
+      tags:
+      - "files"
+      summary: "Returns information of all the created files."
+      responses:
+        "200":
+          description: "Operation succeeded."
+          schema:
+            $ref: "#/definitions/FilesInfo"
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+  
+  /files/{file_id}/status:
+    get:
+      tags:
+      - "files"
+      summary: "Returns information of the model with id {file_id}."
+      parameters:
+      - name: "file_id"
+        in: "path"
+        description: "File id."
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Operation succeeded. Response contains the information of the file: id, status, etc."
+          schema:
+            $ref: "#/definitions/FileInfo"
+        "400":
+          description: "Unknown handler. Use GET method for request."
+        "401":
+          description: "Authorization token is invalid."
+        "404":
+          description: "File hasn't been found."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+      
+  /files/{file_id}/upload:
+    post:
+      tags:
+      - "files"
+      summary: "Is used to asynchronous upload training and validation dataset."
+      description: "The generation tasktype uses the `inputs` and `outputs` fields. Arrays must be of equal length and have at least 32 examples. For the classification task, use `inputs` and `classes`. The `classes` column contains the target labels for classification."
+      parameters:
+      - name: "file_id"
+        in: "path"
+        description: "File id."
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: "#/definitions/Dataset"
+      responses:
+        "200":
+          description: "Operation succeed. In case of success, the response will contain the description of the model. You will need the `model_name` from the response to continue using API."
+          schema:
+            $ref: "#/definitions/FileInfo"
+        "400":
+          description: "Invalid request format."
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
+  
+  /files/{file_id}/delete:
+    delete:
+      tags:
+      - "files"
+      summary: "Delete the file."
+      parameters:
+      - name: "file_id"
+        in: "path"
+        description: "File id."
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Operation succeed."
+          schema:
+            $ref: "#/definitions/FileInfo"
+        "401":
+          description: "Authorization token is invalid."
+      produces:
+      - "application/json"
+      security:
+      - bearerAuth: []
 
 securityDefinitions:
   bearerAuth:
@@ -239,12 +424,26 @@ securityDefinitions:
     in: "header"
     
 definitions:
+  ModelParams:
+    type: "object"
+    properties:
+      train_iters:
+        type: number
+      num_classes:
+        type: number
+      
   CreateModelRequest:
     type: "object"
     properties:
       model_type:
         type: "string"
-
+      model_params:
+        $ref: "#/definitions/ModelParams"
+      name:
+        type: "string"
+    required: 
+      - model_type
+      
   ModelInfo:
     type: "object"
     properties:
@@ -327,3 +526,36 @@ definitions:
         type: "array"
         items:
           type: "string"
+  
+  CreateFileRequest:
+    type: "object"
+    properties:
+      file_name:
+        type: "string"
+      task_type:
+        type: "string"
+    
+  FileInfo:
+    type: "object"
+    properties:
+      status:
+        type: "string"
+      file_name:
+        type: "string"
+      file_id:
+        type: "string"
+      task_type:
+        type: "string"
+  
+  FilesInfo:
+    type: "array"
+    items:
+      $ref: "#/definitions/FileInfo"
+      
+  BindRequest:
+    type: "object"
+    properties:
+      train_file:
+        type: "string"
+      validate_file:
+        type: "string"
