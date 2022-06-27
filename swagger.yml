@@ -109,47 +109,7 @@ paths:
       - "application/json"
       security:
       - bearerAuth: []
-  
-  /models/{model_name}/upload:
-    post:
-      tags:
-      - "models"
-      summary: "Is used to upload training and validation dataset."
-      description: "The generation type model uses the `inputs` and `outputs` fields. Arrays must be of equal length and have at least 32 examples. For the classification task, use `inputs` and `classes`. The `classes` column contains the target labels for classification."
-      parameters:
-      - name: "model_name"
-        in: "path"
-        description: "Model id."
-        required: true
-        type: "string"
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: "#/definitions/Datasets"
-      responses:
-        "200":
-          description: "Operation succeeded. If success model status will be changed as `datasets_uploaded`."
-          schema:
-            $ref: "#/definitions/ModelInfo"
-        "400":
-          description: "Invalid request format. Ensure the datasets have more then 100 examples."
-        "401":
-          description: "Authorization token is invalid."
-        "404":
-          description: "Model hasn't been found."
-        "405":
-          description: "Use POST method for request."
-        "409":
-          description: "Model is ready."
-        "412":
-          description: "Ensure the datasets have more then 32 examples."
 
-      produces:
-      - "application/json"
-      security:
-      - bearerAuth: []
- 
   /models/{model_name}/fit:
     post:
       tags:
